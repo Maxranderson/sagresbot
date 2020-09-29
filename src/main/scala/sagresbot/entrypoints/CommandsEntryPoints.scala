@@ -39,10 +39,6 @@ class CommandsEntryPoints(userRepository: UserRepository, userStatusChangeReposi
         }
   }
 
-  private val commandNotFound: PartialFunction[UpdateRequest, Try[UpdateResponse]] = {
-    case _ => Success(CommandNotFound)
-  }
-
   val commands: PartialFunction[UpdateRequest, Try[UpdateResponse]] =
     indisponivelCommand orElse disponivelCommand orElse getStatusCommand
 
