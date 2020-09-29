@@ -1,11 +1,14 @@
 package sagresbot.configuration
 
 import com.pengrad.telegrambot.model.{Chat, Message}
-
 import scala.util.{Failure, Success, Try}
 
-case class Configuration(botToken: String, groupTitleToPinMessage: String, groupIdToPinMessage: Option[Long] = None, lastStatusMessageSendId: Option[Int] = None) {
-  def isGroupTitleToPinMessage(chat: Chat): Boolean = chat.title().contains(groupTitleToPinMessage)
+case class Configuration(
+  botToken: String, groupTitleToPinMessage: String,
+  groupIdToPinMessage: Option[Long] = None, lastStatusMessageSendId: Option[Int] = None
+) {
+  def isGroupTitleToPinMessage(chat: Chat): Boolean =
+    Option(chat.title()).exists(_.contains(groupTitleToPinMessage))
 
   def updateGroupIdToPinMessage(chat: Chat): Configuration =
     this.copy(groupIdToPinMessage = Some(chat.id()))

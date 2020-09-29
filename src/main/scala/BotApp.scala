@@ -5,14 +5,14 @@ import com.pengrad.telegrambot.request.{DeleteMessage, GetMe, PinChatMessage, Se
 import com.pengrad.telegrambot.{TelegramBot, UpdatesListener}
 import sagresbot.core.usecases.{UserStatusUseCases, UserUseCases}
 import sagresbot.entrypoints.{CommandsEntryPoints, UpdateRequest, UpdateResponse}
-import sagresbot.parsers.UserParsers
-
+import sagresbot.parsers.UserParsers._
 import collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-import scala.util.matching.Regex
 import sagresbot.configuration.Binders._
 import sagresbot.configuration.Configuration
 import sagresbot.core.entity.User
+import sagresbot.helpers.BotHelpers._
+import UserUseCases._
 
 object BotApp extends App {
 
@@ -28,65 +28,26 @@ object BotApp extends App {
 
   println(s"Bot ${botUser.username()} encontrado")
 
-  def onlyCommands(update: Update): Boolean =
-    Option(update.message())
-      .flatMap(m => Option(m.text()))
-      .filter(_.nonEmpty)
-      .exists(_.endsWith(s"@${botUser.username()}"))
-
-  def ifIsGroupTitleToPinMessageSetGroupIdToPinMessage(chat: Chat): Unit =
-    if(config.isGroupTitleToPinMessage(chat)) config = config.updateGroupIdToPinMessage(chat)
-
-  def createOrUpdateUser(message: Message): Try[User] =
-    for {
-      maybeUser <- UserUseCases.findByFirstName(message.from().firstName())(userRepository)
-      user <- maybeUser.map(Success(_)).getOrElse(
-        UserUseCases.createUser(UserParsers.fromTelegramUser(message.from()))(userRepository)
-      )
-    } yield user
-
-  def deleteLastStatusMessage(): Unit =
-    for {
-      groupIdToPinMessage <- config.groupIdToPinMessage
-      lastStatusMessageSendId <- config.lastStatusMessageSendId
-    } bot.execute(new DeleteMessage(groupIdToPinMessage, lastStatusMessageSendId))
-
-  def pinLastStatusMessage(): Unit =
-    for {
-      groupIdToPinMessage <- config.groupIdToPinMessage
-      lastStatusMessageSendId <- config.lastStatusMessageSendId
-    } bot.execute(
-      new PinChatMessage(groupIdToPinMessage, lastStatusMessageSendId)
-        .disableNotification(true)
-    )
-
-  def getCommand(message: Message): Try[String] =
-    new Regex("^\\/(\\w+)@?("+ botUser.username() + ")?$")
-      .findFirstMatchIn(message.text())
-      .map(_.group(1))
-      .map(Success(_))
-      .getOrElse(Failure(new Exception("Falha ao obter o comando.")))
-
   bot.setUpdatesListener(updates => {
     println("Processando novos eventos")
-    updates.asScala.filter(onlyCommands).foreach { update =>
+    updates.asScala.filter(onlyCommands(botUser)).foreach { update =>
       val message = update.message()
       val chat = message.chat()
       val messageText = Option(message.text()).getOrElse("")
       val userFirstName = message.from().firstName()
       println(s"@$userFirstName: $messageText")
-      ifIsGroupTitleToPinMessageSetGroupIdToPinMessage(chat)
+      if(config.isGroupTitleToPinMessage(chat)) config = config.updateGroupIdToPinMessage(chat)
       for {
-        user <- createOrUpdateUser(message)
-        command <- getCommand(message)
+        user <- getOrCreateUser(fromTelegramUser(message.from()))(userRepository)
+        command <- getCommand(message, botUser)
         response <- commandsEntryPoints.commands orElse UpdateResponse.notFound apply UpdateRequest(command, user)
         responseSent <- Try(bot.execute(new SendMessage(chat.id(), response.message)))
       } yield {
         println(s"Response: ${message.text()}")
         if(response != UpdateResponse.CommandNotFound) {
-          deleteLastStatusMessage()
+          buildDeleteMessage(config).foreach(d => bot.execute(d))
           config = config.updateLastStatusMessageSendId(responseSent.message())
-          pinLastStatusMessage()
+          buildPinMessage(config).foreach(p => bot.execute(p))
         }
       }
     }

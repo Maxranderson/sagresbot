@@ -20,6 +20,14 @@ object UserUseCases {
           } yield userUpdated
         case _ => Success(user)
       }
+  def getOrCreateUser(user: User): UserRepository => Try[User] =
+    userRepository =>
+      for {
+        maybeUser <- findByFirstName(user.firstName)(userRepository)
+        user <- maybeUser.map(Success(_)).getOrElse(
+          createUser(user)(userRepository)
+        )
+      } yield user
 
   def createUser(user: User): UserRepository => Try[User] =
     _.create(user)
