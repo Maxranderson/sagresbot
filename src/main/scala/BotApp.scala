@@ -1,18 +1,16 @@
-import java.util.regex.Pattern
 
-import com.pengrad.telegrambot.model.{Chat, Message, Update, User => TelegramUser}
-import com.pengrad.telegrambot.request.{DeleteMessage, GetMe, PinChatMessage, SendMessage}
+import com.pengrad.telegrambot.request.{GetMe, SendMessage, SetMyCommands}
 import com.pengrad.telegrambot.{TelegramBot, UpdatesListener}
-import sagresbot.core.usecases.{UserStatusUseCases, UserUseCases}
-import sagresbot.entrypoints.{CommandsEntryPoints, UpdateRequest, UpdateResponse}
-import sagresbot.parsers.UserParsers._
-import collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
 import sagresbot.configuration.Binders._
 import sagresbot.configuration.Configuration
-import sagresbot.core.entity.User
+import sagresbot.core.usecases.UserUseCases._
+import sagresbot.core.usecases.UserStatusUseCases
+import sagresbot.entrypoints.{UpdateRequest, UpdateResponse}
 import sagresbot.helpers.BotHelpers._
-import UserUseCases._
+import sagresbot.parsers.CommandParsers
+import sagresbot.parsers.UserParsers._
+import scala.collection.JavaConverters._
+import scala.util.Try
 
 object BotApp extends App {
 
@@ -28,6 +26,10 @@ object BotApp extends App {
 
   println(s"Bot ${botUser.username()} encontrado")
 
+  bot.execute(new SetMyCommands(CommandParsers.toBotCommand(commandsEntryPoints.commands):_*))
+
+  println(s"Comandos atualizados")
+
   bot.setUpdatesListener(updates => {
     println("Processando novos eventos")
     updates.asScala.filter(onlyCommands(botUser)).foreach { update =>
@@ -40,11 +42,11 @@ object BotApp extends App {
       for {
         user <- getOrCreateUser(fromTelegramUser(message.from()))(userRepository)
         command <- getCommand(message, botUser)
-        response <- commandsEntryPoints.commands orElse UpdateResponse.notFound apply UpdateRequest(command, user)
+        response <- commandsEntryPoints.commands(UpdateRequest(command, user))
         responseSent <- Try(bot.execute(new SendMessage(chat.id(), response.message)))
       } yield {
-        println(s"Response: ${message.text()}")
-        if(response != UpdateResponse.CommandNotFound) {
+        println(s"Response: ${responseSent.message().text()}")
+        if(response != UpdateResponse.NotFoundResponse) {
           buildDeleteMessage(config).foreach(d => bot.execute(d))
           config = config.updateLastStatusMessageSendId(responseSent.message())
           buildPinMessage(config).foreach(p => bot.execute(p))

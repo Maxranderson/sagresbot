@@ -1,45 +1,50 @@
 package sagresbot.entrypoints
 
 import java.time.Clock
-
 import sagresbot.core.usecases.{UserStatusUseCases, UserUseCases}
 import sagresbot.core.{UserRepository, UserStatusChangeRepository, UserStatusRepository}
-import UpdateResponse.CommandNotFound
 
-import scala.util.{Success, Try}
+class CommandsEntryPoints(
+  userRepository: UserRepository,
+  userStatusChangeRepository: UserStatusChangeRepository,
+  userStatusRepository: UserStatusRepository,
+  clock: Clock
+) {
 
-class CommandsEntryPoints(userRepository: UserRepository, userStatusChangeRepository: UserStatusChangeRepository, userStatusRepository: UserStatusRepository, clock: Clock) {
-
-  private def changeStatusPartial(statusName: String): PartialFunction[UpdateRequest, Try[UpdateResponse]] = {
-    case UpdateRequest(command, user) if command == statusName =>
-      UserStatusUseCases.findByName(statusName)(userStatusRepository).flatMap {
-        case Some(status) =>
-          UserUseCases.changeStatus(user, status)(clock, userRepository, userStatusChangeRepository)
-          UserUseCases.listAll()(userRepository)
-            .map(UserResources.usersStatusReponse)
-        case None =>
-          println(s"Falha: Status $statusName não encontrado")
-          UserUseCases.listAll()(userRepository)
-            .map(UserResources.usersStatusReponse)
-      }
-  }
-
-  private val indisponivelCommand: PartialFunction[UpdateRequest, Try[UpdateResponse]] =
-    changeStatusPartial("indisponivel")
-
-  private val disponivelCommand: PartialFunction[UpdateRequest, Try[UpdateResponse]] =
-    changeStatusPartial("disponivel")
-
-  private val getStatusCommand: PartialFunction[UpdateRequest, Try[UpdateResponse]] = {
-    case UpdateRequest("status", _) =>
-      UserUseCases.listAll()(userRepository)
-        .map {
-          case u if u.isEmpty => UpdateResponse("Sem usuários no momento.")
-          case u => UserResources.usersStatusReponse(u)
+  private def changeStatusCommand(
+    statusName: String, description: String
+  ): Command =
+    Command(statusName, description, {
+      case UpdateRequest(command, user) =>
+        UserStatusUseCases.findByName(statusName)(userStatusRepository).flatMap {
+          case Some(status) =>
+            UserUseCases.changeStatus(user, status)(clock, userRepository, userStatusChangeRepository)
+            UserUseCases.listAll()(userRepository)
+              .map(UserResources.usersStatusReponse)
+          case None =>
+            println(s"Falha: Status $statusName não encontrado")
+            UserUseCases.listAll()(userRepository)
+              .map(UserResources.usersStatusReponse)
         }
-  }
+    })
 
-  val commands: PartialFunction[UpdateRequest, Try[UpdateResponse]] =
-    indisponivelCommand orElse disponivelCommand orElse getStatusCommand
+  private val indisponivelCommand: Command =
+    changeStatusCommand("indisponivel", "Modifica para o status que indica offline")
+
+  private val disponivelCommand: Command =
+    changeStatusCommand("disponivel", "Modifica para o status que indica online")
+
+  private val getStatusCommand: Command =
+    Command("status", "Obtém o status atual de todos os usuários",
+      _ =>
+        UserUseCases.listAll()(userRepository)
+          .map {
+            case u if u.isEmpty => UpdateResponse("Sem usuários no momento.")
+            case u => UserResources.usersStatusReponse(u)
+          }
+    )
+
+  val commands: Commands =
+    Commands.define(indisponivelCommand, disponivelCommand, getStatusCommand)
 
 }
