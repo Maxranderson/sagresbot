@@ -23,7 +23,7 @@ object UserUseCases {
   def getOrCreateUser(user: User): UserRepository => Try[User] =
     userRepository =>
       for {
-        maybeUser <- findByFirstName(user.firstName)(userRepository)
+        maybeUser <- findByFirstNameWithLastStatus(user.firstName)(userRepository)
         user <- maybeUser.map(Success(_)).getOrElse(
           createUser(user)(userRepository)
         )
@@ -32,10 +32,10 @@ object UserUseCases {
   def createUser(user: User): UserRepository => Try[User] =
     _.create(user)
 
-  def findByFirstName(firstName: String): UserRepository => Try[Option[User]] =
-    _.findByFirstName(firstName)
+  def findByFirstNameWithLastStatus(firstName: String): UserRepository => Try[Option[User]] =
+    _.findByFirstNameWithLastStatus(firstName)
 
-  def listAll(): UserRepository => Try[Seq[User]] =
-    _.listAll()
+  def listAllWithLastStatus(): UserRepository => Try[Seq[User]] =
+    _.listAllWithLastStatus()
 
 }

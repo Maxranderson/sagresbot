@@ -5,10 +5,12 @@ import sagresbot.configuration.Binders._
 import sagresbot.configuration.Configuration
 import sagresbot.core.usecases.UserUseCases._
 import sagresbot.core.usecases.UserStatusUseCases
+import sagresbot.dataproviders.DBConfiguration
 import sagresbot.entrypoints.{UpdateRequest, UpdateResponse}
 import sagresbot.helpers.BotHelpers._
 import sagresbot.parsers.CommandParsers
 import sagresbot.parsers.UserParsers._
+
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -16,7 +18,9 @@ object BotApp extends App {
 
   println("Iniciando bot...")
 
-  UserStatusUseCases.init()(userStatusRepository)
+  DBConfiguration.migrate()
+
+  UserStatusUseCases.init()(userStatusRepository).get
 
   var config = Configuration.fromEnv().get
 
@@ -39,7 +43,7 @@ object BotApp extends App {
       val userFirstName = message.from().firstName()
       println(s"@$userFirstName: $messageText")
       if(config.isGroupTitleToPinMessage(chat)) config = config.updateGroupIdToPinMessage(chat)
-      for {
+      (for {
         user <- getOrCreateUser(fromTelegramUser(message.from()))(userRepository)
         command <- getCommand(message, botUser)
         response <- commandsEntryPoints.commands(UpdateRequest(command, user))
@@ -51,7 +55,7 @@ object BotApp extends App {
           config = config.updateLastStatusMessageSendId(responseSent.message())
           buildPinMessage(config).foreach(p => bot.execute(p))
         }
-      }
+      }).get
     }
     UpdatesListener.CONFIRMED_UPDATES_ALL
   })

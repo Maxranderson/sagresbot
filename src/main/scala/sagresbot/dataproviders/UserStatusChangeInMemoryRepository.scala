@@ -7,9 +7,6 @@ import scala.collection.mutable
 import scala.util.Try
 
 class UserStatusChangeInMemoryRepository(data: mutable.HashSet[UserStatusChange] = mutable.HashSet()) extends UserStatusChangeRepository {
-  override def findLastUserStatusChange(user: User): Try[Option[UserStatusChange]] =
-    Try(data.find(_.user == user))
-
   override def create(userStatusChange: UserStatusChange): Try[UserStatusChange] = Try {
     data += userStatusChange
     userStatusChange

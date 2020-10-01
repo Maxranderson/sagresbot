@@ -19,11 +19,11 @@ class CommandsEntryPoints(
         UserStatusUseCases.findByName(statusName)(userStatusRepository).flatMap {
           case Some(status) =>
             UserUseCases.changeStatus(user, status)(clock, userRepository, userStatusChangeRepository)
-            UserUseCases.listAll()(userRepository)
+            UserUseCases.listAllWithLastStatus()(userRepository)
               .map(UserResources.usersStatusReponse)
           case None =>
             println(s"Falha: Status $statusName não encontrado")
-            UserUseCases.listAll()(userRepository)
+            UserUseCases.listAllWithLastStatus()(userRepository)
               .map(UserResources.usersStatusReponse)
         }
     })
@@ -37,7 +37,7 @@ class CommandsEntryPoints(
   private val getStatusCommand: Command =
     Command("status", "Obtém o status atual de todos os usuários",
       _ =>
-        UserUseCases.listAll()(userRepository)
+        UserUseCases.listAllWithLastStatus()(userRepository)
           .map {
             case u if u.isEmpty => UpdateResponse("Sem usuários no momento.")
             case u => UserResources.usersStatusReponse(u)

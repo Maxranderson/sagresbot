@@ -6,8 +6,6 @@ import scala.util.Try
 
 trait UserStatusChangeRepository {
 
-  def findLastUserStatusChange(user: User): Try[Option[UserStatusChange]]
-
   def create(userStatusChange: UserStatusChange): Try[UserStatusChange]
 
   def listByUser(user: User): Try[Seq[UserStatusChange]]

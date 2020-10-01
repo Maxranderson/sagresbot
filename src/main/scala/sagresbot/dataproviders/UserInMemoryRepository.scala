@@ -11,7 +11,7 @@ class UserInMemoryRepository(
   override def listAll(): Try[Seq[User]] =
     Try(data.toSeq)
 
-  override def findByFirstName(firstName: String): Try[Option[User]] =
+  override def findByFirstNameWithLastStatus(firstName: String): Try[Option[User]] =
     Try(data.find(_.firstName == firstName))
 
   override def create(user: User): Try[User] = Try {
@@ -24,4 +24,7 @@ class UserInMemoryRepository(
     data += user
     user
   }
+
+  override def listAllWithLastStatus(): Try[Seq[User]] =
+    listAll()
 }
