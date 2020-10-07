@@ -49,7 +49,6 @@ class UserSqlLiteRepository() extends UserRepository {
   }
 
   override def findByFirstNameWithLastStatus(firstName: String): Try[Option[User]] = Try {
-    println(listAllWithLastStatusQuery)
     run(listAllWithLastStatusQuery.filter(_._1.firstName == lift(firstName)))
       .headOption
       .map(t => UserDAO.toUser(t._1, t._2))
