@@ -10,6 +10,6 @@ object DBConfiguration {
   private val flyway = Flyway.configure().dataSource(config.dataSource).load()
 
   def migrate() = flyway.migrate()
-  lazy val ctx = new PostgresJdbcContext(SnakeCase, "ctx")
+  lazy val ctx = new PostgresJdbcContext(SnakeCase, config)
 
 }
