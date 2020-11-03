@@ -6,7 +6,7 @@ import sagresbot.core.entity.UserStatus
 import sagresbot.dataproviders.schemas.UserStatusSchema._
 import scala.util.Try
 
-class UserStatusSqlLiteRepository() extends UserStatusRepository {
+class UserStatusSqlRepository() extends UserStatusRepository {
 
   override def listAll(): Try[Seq[UserStatus]] = Try {
     run(usersStatus)

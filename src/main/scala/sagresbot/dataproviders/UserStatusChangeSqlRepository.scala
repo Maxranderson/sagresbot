@@ -8,7 +8,7 @@ import sagresbot.dataproviders.schemas.{UserSchema, UserStatusSchema}
 import sagresbot.dataproviders.schemas.UserStatusChangeSchema._
 import scala.util.Try
 
-class UserStatusChangeSqlLiteRepository() extends UserStatusChangeRepository {
+class UserStatusChangeSqlRepository() extends UserStatusChangeRepository {
 
   override def create(userStatusChange: UserStatusChange): Try[UserStatusChange] = Try {
     run(usersStatusChanges.insert(

@@ -11,7 +11,7 @@ import sagresbot.dataproviders.schemas.UserSchema._
 import sagresbot.dataproviders.schemas.{UserSchema, UserStatusChangeSchema, UserStatusSchema}
 import scala.util.Try
 
-class UserSqlLiteRepository() extends UserRepository {
+class UserSqlRepository() extends UserRepository {
 
   private val lastStatusUpdateAtQuery: ctx.Quoted[Query[(Long, Option[LocalDateTime])]] = quote {
     UserStatusChangeSchema.usersStatusChanges
